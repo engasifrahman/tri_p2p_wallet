@@ -22,41 +22,10 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('v1')->group(function (){
-
-    Route::get('/currency-converter', function () {
-        $response = Http::acceptJson()->get('https://api.apilayer.com/currency_data/convert', [
-            'to' => 'EUR',
-            'from' => 'USD',
-            'amount' => 1000,
-            'apikey' => 'XNHuBwGEbY85uMQbKPTN16QGWeihg6Qc'
-        ]);
-        return $response?->json();
-    });
-
-    Route::get('/mail-preview', function () {
-        $trx = Transaction::find(1);
-
-        return new ReceivedMoney($trx);
-    });
-
-    Route::get('/send-mail', function () {
-        $trx = Transaction::find(1);
-
-        SendMail::dispatch($trx)->delay(now()->addSeconds(10));
-
-        // Mail::to('testuser@xyz.com')->send(new ReceivedMoney($trx));
-
-        echo ('Mail send successful!');
-    });
-
     Route::post('/registration', 'AuthController@registration')->name('registration');
     Route::post('/login', 'AuthController@login')->name('login');
 
     Route::middleware(['auth:sanctum'])->group( function (){
-        Route::get('/test', function(){
-            dd(User::factory());
-        });
-
         Route::get('/statistics', 'WalletController@statistics')->name('statistics');
 
         Route::get('/transactions', 'TransactionController@transactions')->name('transactions');
