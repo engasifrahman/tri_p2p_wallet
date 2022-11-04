@@ -24,57 +24,60 @@ class TransactionController extends Controller
         ->orWhere('phone', $request->receiver_identity)
         ->first();
 
-        if($receiver){
-            $currencyFrom = auth()->user()->currency;
-            $currencyTo = $receiver->currency;
+        if(!$receiver){
+            return response()->instantResponse(false, 'Receiver\'s wallet not found!', null, null, 404);
+        }
 
-            if($receiver->id !== auth()->user()->id){
-                if($currencyFrom !== $currencyTo){
-                    $walletBalance = Transaction::getWalletBalance();
+        if($receiver->id == auth()->user()->id){
+            return response()->instantResponse(false, 'You can not send money to your own wallet!', null, null, 400);
+        }
 
-                    if($request->amount <= $walletBalance){
-                        $convertRespose = Transaction::convertCurrency($currencyFrom, $currencyTo, $request->amount);
+        $currencyFrom = auth()->user()->currency;
+        $currencyTo = $receiver->currency;
 
-                        if($convertRespose['success']){
-                            try {
-                                $transaction = Transaction::create([
-                                    'sender_id' => auth()->user()->id,
-                                    'receiver_id' => $receiver->id,
-                                    'sent_amount' => $request->amount,
-                                    'received_amount' => $convertRespose['converted_amount'],
-                                    'conversion_rate' => $convertRespose['rate']
-                                ]);
+        if($currencyFrom == $currencyTo){
+            return response()->instantResponse(false, 'Receiver\'s wallet currency can not be the same as yours!', null, null, 400);
+        }
 
-                                $return_data = [
-                                    'transaction_id' => $transaction->id,
-                                    'receiver_name' => $receiver->name,
-                                    'receiver_identity' => $request->receiver_identity,
-                                    'sent_amount' => $request->amount,
-                                    'sent_currency' =>  $currencyFrom ,
-                                    'converted_amount' => $convertRespose['converted_amount'],
-                                    'converted_currency' => $currencyTo,
-                                    'conversion_rate' => $convertRespose['rate']
-                                ];
+        $walletBalance = Transaction::getWalletBalance();
 
-                                response()->setResponse(true, 'Transaction initiated successfully!', null, $return_data, 200);
-                            } catch (\Exception $e) {
-                                response()->setResponse(false, 'Unable to proceed right now, please try again!', null, null, 500);
-                            }
-                        } else{
-                            response()->setResponse(false, 'Currency conversion issue, please try again!', null, null, 500);
-                        }
-                    } else{
-                        response()->setResponse(false, 'Insufficient balance!', null, null, 400);
-                    }
-                } else{
-                    response()->setResponse(false, 'Receiver\'s wallet currency can not be the same as yours!', null, null, 400);
-                }
+        if($request->amount > $walletBalance){
+            return response()->instantResponse(false, 'Insufficient balance!', null, null, 400);
+        }
+
+        $convertRespose = Transaction::convertCurrency($currencyFrom, $currencyTo, $request->amount);
+
+        if(!$convertRespose['success']){
+            if($convertRespose['status'] == 429){
+                response()->setResponse(false, 'Currency converter\'s daily limit exceeded!', null, null, 500);
             } else{
-                response()->setResponse(false, 'You can not send money to your own wallet!', null, null, 400);
+                response()->setResponse(false, 'Currency converter\'s issue, please try again later!', null, null, 500);
             }
-
         } else{
-            response()->setResponse(false, 'Receiver\'s wallet not found!', null, null, 404);
+            try {
+                $transaction = Transaction::create([
+                    'sender_id' => auth()->user()->id,
+                    'receiver_id' => $receiver->id,
+                    'sent_amount' => $request->amount,
+                    'received_amount' => $convertRespose['converted_amount'],
+                    'conversion_rate' => $convertRespose['rate']
+                ]);
+
+                $return_data = [
+                    'transaction_id' => $transaction->id,
+                    'receiver_name' => $receiver->name,
+                    'receiver_identity' => $request->receiver_identity,
+                    'sent_amount' => $request->amount,
+                    'sent_currency' =>  $currencyFrom ,
+                    'converted_amount' => $convertRespose['converted_amount'],
+                    'converted_currency' => $currencyTo,
+                    'conversion_rate' => $convertRespose['rate']
+                ];
+
+                response()->setResponse(true, 'Transaction initiated successfully!', null, $return_data, 200);
+            } catch (\Exception $e) {
+                response()->setResponse(false, 'Unable to proceed right now, please try again!', null, null, 500);
+            }
         }
 
         return response()->getResponse();
@@ -92,29 +95,28 @@ class TransactionController extends Controller
         ]);
 
         if($validator->fails()){
-            response()->setResponse(false, 'Validation failed!', $validator->errors(), null, 422);
-        } else{
-            if($transaction){
-                if($transaction->status === Transaction::INITIATED){
-                    $transaction->status = ($request->status === Transaction::SUCCESS) ? $request->status : Transaction::CANCELED;
+            return response()->instantResponse(false, 'Validation failed!', $validator->errors(), null, 422);
+        }
 
-                    if($transaction->save()){
-                        if($transaction->status = Transaction::SUCCESS){
-                            SendMail::dispatch($transaction)->delay(now()->addSeconds(10));
-                        }
+        if(!$transaction){
+            return response()->instantResponse(false, 'Something went wrong!', null, null, 400);
+        }
 
-                        $message = $request->status === Transaction::SUCCESS ? 'successful' : 'cancelled';
-                        response()->setResponse(true, "Transaction $message!", null, null, 200);
-                    } else{
-                        response()->setResponse(false, 'Unable to proceed right now, please try again!', null, null, 400);
-                    }
-                } else{
-                    response()->setResponse(false, 'This transaction already completed!', null, null, 400);
-                }
-            } else{
-                response()->setResponse(false, 'Something went wrong!', null, null, 400);
+        if($transaction->status !== Transaction::INITIATED){
+            return response()->instantResponse(false, 'This transaction already completed!', null, null, 400);
+        }
+
+        $transaction->status = ($request->status === Transaction::SUCCESS) ? $request->status : Transaction::CANCELED;
+
+        if($transaction->save()){
+            if($transaction->status = Transaction::SUCCESS){
+                SendMail::dispatch($transaction)->delay(now()->addSeconds(10));
             }
 
+            $message = $request->status === Transaction::SUCCESS ? 'successful' : 'cancelled';
+            response()->setResponse(true, "Transaction $message!", null, null, 200);
+        } else{
+            response()->setResponse(false, 'Unable to proceed right now, please try again!', null, null, 400);
         }
 
         return response()->getResponse();
@@ -153,11 +155,11 @@ class TransactionController extends Controller
     }
 
     /**
-     * Display a listing of successfull send money transactions.
+     * Display a listing of successfull sent money transactions.
      *
      * @return \Illuminate\Http\Response
      */
-    public function sendMoneyTransactions()
+    public function sentMoneyTransactions()
     {
         $walletBalance = Transaction::getWalletBalance();
 

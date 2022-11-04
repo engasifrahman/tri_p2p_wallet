@@ -54,13 +54,13 @@ Route::prefix('v1')->group(function (){
 
     Route::middleware(['auth:sanctum'])->group( function (){
         Route::get('/test', function(){
-            return Transaction::getWalletBalance();
+            dd(User::factory());
         });
 
         Route::get('/statistics', 'WalletController@statistics')->name('statistics');
 
         Route::get('/transactions', 'TransactionController@transactions')->name('transactions');
-        Route::get('/send-money-transactions', 'TransactionController@sendMoneyTransactions')->name('send_money_transactions');
+        Route::get('/sent-money-transactions', 'TransactionController@sentMoneyTransactions')->name('sent_money_transactions');
         Route::get('/received-money-transactions', 'TransactionController@receivedMoneyTransactions')->name('received_money_transactions');
 
         Route::post('/initiate-send-money', 'TransactionController@initiateSendMoney')->name('initiate_send_money');

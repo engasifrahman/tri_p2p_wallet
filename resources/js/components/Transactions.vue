@@ -20,7 +20,7 @@
             </div>
             <select id="" class="form-select my-2" v-model="transaction_type">
                 <option value="transactions">All Transactions</option>
-                <option value="send-money">Send Money Transactions</option>
+                <option value="sent-money">Sent Money Transactions</option>
                 <option value="received-money">Received Money Transactions</option>
             </select>
 
@@ -196,8 +196,8 @@
 
                     if(newValue === 'transactions'){
                         this.req_url = '/transactions';
-                    } else if(newValue === 'send-money'){
-                        this.req_url = '/send-money-transactions';
+                    } else if(newValue === 'sent-money'){
+                        this.req_url = '/sent-money-transactions';
                     } else if(newValue === 'received-money'){
                         this.req_url = '/received-money-transactions';
                     }
@@ -253,7 +253,7 @@
 
                         this.resetSendMoney();
 
-                        this.transaction_type = this.transaction_type == 'send-money' ? 'transactions' : 'send-money';
+                        this.transaction_type = this.transaction_type == 'sent-money' ? 'transactions' : 'sent-money';
                     }
                 }
             }

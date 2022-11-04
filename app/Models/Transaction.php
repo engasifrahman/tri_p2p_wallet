@@ -93,6 +93,7 @@ class Transaction extends Model
     public static function convertCurrency($from, $to, $amount){
         $returnData = [
             'success' => false,
+            'status' => null,
             'rate' => null,
             'converted_amount' => 0
         ];
@@ -102,8 +103,11 @@ class Transaction extends Model
                 'to' => $to,
                 'from' => $from,
                 'amount' => $amount,
-                'apikey' => 'XNHuBwGEbY85uMQbKPTN16QGWeihg6Qc'
+                // 'apikey' => 'XNHuBwGEbY85uMQbKPTN16QGWeihg6Qc'
+                'apikey' => 'hAHmJ9XC2bisktn2IYiYG9Ovn4UiskRt'
             ]);
+
+            $returnData['status'] = $response->status();
 
             if($response->successful()){
                 $returnData['success'] = true;

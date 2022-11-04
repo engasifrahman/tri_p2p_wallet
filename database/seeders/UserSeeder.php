@@ -30,7 +30,25 @@ class UserSeeder extends Seeder
         User::create([
             'name' => 'Eva Akter Meri',
             'email' => 'evaaktermeri@gmail.com',
-            'phone' => '01610241412',
+            'phone' => '01710445385',
+            'currency' => 'EUR',
+            'email_verified_at' => now(),
+            'password' => Hash::make('12345678'),
+        ]);
+
+        User::create([
+            'name' => 'Estiak Ahmed',
+            'email' => 'estiak@gmail.com',
+            'phone' => '01310520252',
+            'currency' => 'USD',
+            'email_verified_at' => now(),
+            'password' => Hash::make('12345678'),
+        ]);
+
+        User::create([
+            'name' => 'Asma Begum',
+            'email' => 'asma@gmail.com',
+            'phone' => '01310520152',
             'currency' => 'EUR',
             'email_verified_at' => now(),
             'password' => Hash::make('12345678'),
